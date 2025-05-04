@@ -11,10 +11,11 @@ import (
 	"github.com/spf13/cobra"
 )
 
+// setCmd updates the attributes.json for the active identity vault
+// It does not issue a credential; use `ego issue` to generate one from attributes.
 var setCmd = &cobra.Command{
-	Use:   "set <key> <value>",
-	Short: "Issue a credential for all stored attributes",
-	Long:  "Store/update a metadata attribute and issue a new Verifiable Credential with all attributes for the active identity.",
+	Use:   "set <key> <value> [--out <directory>]",
+	Short: "Set a metadata attribute for the active identity",
 	Args:  cobra.ExactArgs(2),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		key, val := args[0], args[1]
@@ -28,7 +29,12 @@ var setCmd = &cobra.Command{
 		if rootDir == "" {
 			rootDir = "store"
 		}
-		vaultDir := filepath.Join(rootDir, cfg.Active)
+
+		// Determine vault directory
+		vaultDir := altVaultDir
+		if vaultDir == "" {
+			vaultDir = filepath.Join(rootDir, cfg.Active)
+		}
 
 		// Ensure vault exists
 		if _, err := os.Stat(filepath.Join(vaultDir, "did.json")); err != nil {
@@ -66,4 +72,5 @@ var setCmd = &cobra.Command{
 
 func init() {
 	rootCmd.AddCommand(setCmd)
+	setCmd.Flags().StringVar(&altVaultDir, "out", "", "Directory of the vault (optional, overrides active)")
 }
