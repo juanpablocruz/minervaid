@@ -7,8 +7,6 @@ import (
 	"time"
 )
 
-// Presentation represents a Verifiable Presentation with extensible proofs
-// Proofs array holds JSON-encoded proof objects (e.g., signature proofs).
 type Presentation struct {
 	Context              []string          `json:"@context"`
 	Type                 []string          `json:"type"`
@@ -17,7 +15,6 @@ type Presentation struct {
 	Proofs               []json.RawMessage `json:"proof"`
 }
 
-// NewPresentation creates a new presentation without any proofs
 func NewPresentation(creds []Credential, holder string) *Presentation {
 	return &Presentation{
 		Context:              []string{"https://www.w3.org/2018/credentials/v1"},
@@ -28,7 +25,6 @@ func NewPresentation(creds []Credential, holder string) *Presentation {
 	}
 }
 
-// SignPresentation appends an Ed25519 signature proof to the presentation
 func (p *Presentation) SignPresentation(priv ed25519.PrivateKey, verificationMethod string) error {
 	// Serialize presentation without existing signature proofs
 	tmp := *p
