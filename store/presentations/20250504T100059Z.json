@@ -1,0 +1,39 @@
+{
+  "@context": [
+    "https://www.w3.org/2018/credentials/v1"
+  ],
+  "type": [
+    "VerifiablePresentation"
+  ],
+  "verifiableCredential": [
+    {
+      "@context": [
+        "https://www.w3.org/2018/credentials/v1"
+      ],
+      "id": "20250504T095124Z",
+      "type": [
+        "VerifiableCredential"
+      ],
+      "issuer": "did:key:z6MkmypjAv9Ejj2k7TL5VJGmAkS6XZa6XjmHTykTLJemhRNC",
+      "issuanceDate": "2025-05-04T09:51:24.636396Z",
+      "credentialSubject": {
+        "age": 34
+      },
+      "proof": {
+        "type": "Ed25519Signature2018",
+        "created": "2025-05-04T09:51:24Z",
+        "proofPurpose": "assertionMethod",
+        "verificationMethod": "did:key:z6MkmypjAv9Ejj2k7TL5VJGmAkS6XZa6XjmHTykTLJemhRNC#keys-1",
+        "jws": "e15f3b7ac25062b67c6c94023542c6451d50afcd7c2ebfe94c76b1a4bbf1479511c424c5a8176085f52dedcdbd7a6320dff762007fd4398a0dd48e673168fb09"
+      }
+    }
+  ],
+  "holder": "did:key:z6MkmypjAv9Ejj2k7TL5VJGmAkS6XZa6XjmHTykTLJemhRNC",
+  "proof": {
+    "type": "Ed25519Signature2018",
+    "created": "2025-05-04T10:00:59Z",
+    "proofPurpose": "authentication",
+    "verificationMethod": "did:key:z6MkmypjAv9Ejj2k7TL5VJGmAkS6XZa6XjmHTykTLJemhRNC#keys-1",
+    "jws": "ac332f1ef68febc114637753bbc00819c8cd7c43ad5c8057d634f9960272360525da1eef2f748b0c2ebe457fdf79efe7f208d82422fa1fb5ef3a2d2d818c690d"
+  }
+}
