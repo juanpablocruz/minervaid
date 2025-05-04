@@ -6,11 +6,8 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
-	"time"
 
 	"github.com/juanpablocruz/minervaid/internal/config"
-	"github.com/juanpablocruz/minervaid/internal/credentials"
-	"github.com/juanpablocruz/minervaid/internal/vault"
 	"github.com/spf13/cobra"
 )
 
@@ -33,12 +30,16 @@ var setCmd = &cobra.Command{
 		}
 		vaultDir := filepath.Join(rootDir, cfg.Active)
 
+		// Ensure vault exists
+		if _, err := os.Stat(filepath.Join(vaultDir, "did.json")); err != nil {
+			return fmt.Errorf("vault '%s' not found: %w", cfg.Active, err)
+		}
+
 		// Load existing attributes
 		attrFile := filepath.Join(vaultDir, "attributes.json")
 		attrs := make(map[string]interface{})
 		if data, err := os.ReadFile(attrFile); err == nil {
-			err = json.Unmarshal(data, &attrs)
-			if err != nil {
+			if err := json.Unmarshal(data, &attrs); err != nil {
 				return fmt.Errorf("invalid attributes.json: %w", err)
 			}
 		}
@@ -58,38 +59,7 @@ var setCmd = &cobra.Command{
 			return fmt.Errorf("write attributes.json: %w", err)
 		}
 
-		// Load identity keys
-		v := vault.NewVault(vaultDir)
-		didDoc, priv, err := v.Load()
-		if err != nil {
-			return fmt.Errorf("load vault: %w", err)
-		}
-
-		// Extract DID
-		var doc map[string]interface{}
-		if err := json.Unmarshal(didDoc, &doc); err != nil {
-			return fmt.Errorf("parse did.json: %w", err)
-		}
-		did, _ := doc["id"].(string)
-
-		// Issue credential with full attributes
-		credID := time.Now().UTC().Format("20060102T150405Z")
-		cred := credentials.NewCredential(credID, did, attrs)
-		if err := cred.SignCredential(priv, did+"#keys-1"); err != nil {
-			return fmt.Errorf("sign credential: %w", err)
-		}
-
-		// Save credential
-		credDir := filepath.Join(vaultDir, "credentials")
-		if err := os.MkdirAll(credDir, fs.FileMode(0700)); err != nil {
-			return fmt.Errorf("create credentials dir: %w", err)
-		}
-		store := &credentials.FileStore{Dir: credDir}
-		if err := store.Save(cred); err != nil {
-			return fmt.Errorf("save credential: %w", err)
-		}
-
-		cmd.Printf("Credential '%s' issued with attributes: %v", credID, attrs)
+		cmd.Printf("Attribute '%s' set to '%s'\n", key, val)
 		return nil
 	},
 }
