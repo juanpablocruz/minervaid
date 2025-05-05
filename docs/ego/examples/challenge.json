@@ -1,0 +1,7 @@
+{
+  "type": "AuthenticationChallenge",
+  "challenge": "<nonce>",
+  "domain": "api.example.com",
+  "issuedAt": "2025-05-05T06:18:43Z",
+  "expiresAt": "2025-05-05T06:23:43Z"
+}

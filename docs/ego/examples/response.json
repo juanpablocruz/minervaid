@@ -1,0 +1,4 @@
+{
+  "challenge": { /* see above */ },
+  "proof": { /* Ed25519 SignatureProof JSON */ }
+}
