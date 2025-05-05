@@ -1,114 +1,210 @@
 # CLI Usage Guide for MinervaID
 
+MinervaID provides a command-line interface for decentralized SSI: DIDs, Verifiable Credentials (with optional zero-knowledge proofs), Presentations, Revocation, and Authentication.
+
 ## Installation
 
 ```bash
-# from module root
-go install github.com/tuusuario/minervaid/cmd/minervaid@latest
+# From module root
+go install github.com/juanpablocruz/minervaid/cmd/minervaid@latest
 ```
+
+## Global Options
+
+| Flag           | Description                         | Default   |
+| -------------- | ----------------------------------- | --------- |
+| `--store DIR`  | Directory for storing data          | `./store` |
 
 ## Commands
 
-- **new-did**
-  - Generates a new DID and stores the private key in `<store>/keystore.json`.
-  - Usage:
+### 1. DID Management
 
-    ```bash
-    minervaid new-did --store ./store
-    ```
+- **new-did**  
+  Generate a new DID and store its private key in `<store>/keystore.json`.  
+  **Usage:**
 
-  - Example output:
+  ```bash
+  minervaid new-did --store ./store
+  ```
 
-    ```bash
-    New DID: did:key:z123abc...
-    ```
+  **Example output:**
 
-- **list-dids**
-  - Lists all stored DIDs.
-  - Usage:
+  ```
+  New DID: did:key:z123abc...
+  ```
 
-    ```bash
-    minervaid list-dids --store ./store
-    ```
+- **list-dids**  
+  List all stored DIDs.  
+  **Usage:**
 
-- **new-cred**
-  - Creates and signs a new Verifiable Credential.
-  - **Subject** can be provided as:
-    - Inline JSON string: e.g.
+  ```bash
+  minervaid list-dids --store ./store
+  ```
 
-      ```bash
-      --subject '{"id":"did:example:456","name":"Alice","age":30}'
-      ```
+### 2. Verifiable Credentials
 
-    - Or via file reference:
+- **new-cred**  
+  Create and sign a new Verifiable Credential.  
+  **Flags:**
 
-      ```bash
-      --subject @subject.json
-      ```
+  | Flag               | Description                                                                  |
+  | ------------------ | ---------------------------------------------------------------------------- |
+  | `--did DID`        | Issuer DID (must exist via `new-did`)                                         |
+  | `--subject JSON`   | Subject JSON inline or `@file.json` (e.g., `'{"id":"did:ex:456","age":30}'`) |
+  | `--id ID`          | Credential ID (optional; defaults to timestamp)                               |
+  | `--zkp-min-age N`  | Attach ZK proof that `age ≥ N`, removing cleartext `age`                      |
+  
+  **Usage:**
 
-  - **ID** flag is optional; defaults to timestamp.
-  - Usage examples:
+  ```bash
+  minervaid new-cred \
+    --did did:key:z123abc... \
+    --subject '{"id":"did:example:456","age":30}' \
+    --store ./store
+  ```
 
-    ```bash
-    minervaid new-cred --did did:key:z123abc... --subject '{"id":"did:example:456","age":30}' --store ./store
-    ```
+  or with ZKP:
 
-    Or:
+  ```bash
+  minervaid new-cred \
+    --did did:key:z123abc... \
+    --subject @subject.json \
+    --zkp-min-age 18 \
+    --store ./store
+  ```
 
-    ```bash
-    minervaid new-cred --did did:key:z123abc... --subject @subject.json --id cred123 --store ./store
-    ```
+- **list-creds**  
+  List all issued credential IDs.  
+  **Usage:**
 
-- **list-creds**
-  - Lists all credential IDs saved under `<store>/credentials`.
-  - Usage:
+  ```bash
+  minervaid list-creds --store ./store
+  ```
 
-    ```bash
-    minervaid list-creds --store ./store
-    ```
+- **get-cred**  
+  Retrieve and print a credential JSON by ID.  
+  **Usage:**
 
-- **get-cred**
-  - Retrieves and prints a VC by its ID.
-  - Usage:
+  ```bash
+  minervaid get-cred --id <credID> --store ./store
+  ```
 
-    ```bash
-    minervaid get-cred --id cred123 --store ./store
-    ```
+- **verify-cred**  
+  Verify the Ed25519 signature and any embedded zero-knowledge proof.  
+  **Usage:**
 
-### Example subject.json
+  ```bash
+  minervaid verify-cred --file ./store/credentials/<credID>.json
+  ```
 
-```json
-{
-  "id": "did:example:456",
-  "name": "Alice",
-  "age": 30
-}
-```
+  **Output:**
 
-- **new-presentation**
-  - Generates a Verifiable Presentation from one or more credentials.
-  - **Flags**:
-    - `--did DID` (holder DID used to sign the presentation)
-    - `--creds ids` (comma-separated list of credential IDs)
-    - `--reveal fields` (comma-separated list of JSON field names to selectively disclose)
-  - Usage:
+  ```
+  Credential is valid ✅
+  ```
 
-    ```bash
-    minervaid new-presentation --did did:key:z123abc... --creds id1,id2 --reveal name,age --store ./store
-    ```
+### 3. Presentations
 
-- **list-presents**
-  - Lists all stored presentations under `<store>/presentations`.
-  - Usage:
+- **new-presentation**  
+  Generate a Verifiable Presentation from one or more credentials.  
+  **Flags:**
 
-    ```bash
-    minervaid list-presents --store ./store
-    ```
+  | Flag              | Description                                                       |
+  | ----------------- | ----------------------------------------------------------------- |
+  | `--did DID`       | Holder DID for signing                                            |
+  | `--creds IDs`     | Comma-separated list of credential IDs                            |
+  | `--reveal fields` | Comma-separated list of JSON field names to selectively disclose  |
+  
+  **Usage:**
 
-- **get-presentation**
-  - Retrieves and prints a Verifiable Presentation by its ID.
-  - Usage:
+  ```bash
+  minervaid new-presentation \
+    --did did:key:z123abc... \
+    --creds <credID> \
+    --reveal name,age \
+    --store ./store
+  ```
 
-    ```bash
-    minervaid get-presentation --id pres1 --store ./store
-    ```
+- **list-presents**  
+  List all stored presentation IDs.  
+  **Usage:**
+
+  ```bash
+  minervaid list-presents --store ./store
+  ```
+
+- **get-presentation**  
+  Retrieve and print a presentation JSON by ID.  
+  **Usage:**
+
+  ```bash
+  minervaid get-presentation --id <presID> --store ./store
+  ```
+
+- **verify-presentation**  
+  Verify the presentation signature and embedded credentials.  
+  **Usage:**
+
+  ```bash
+  minervaid verify-presentation --file ./store/presentations/<presID>.json
+  ```
+
+  **Output:**
+
+  ```
+  Presentation is valid ✅
+  ```
+
+### 4. Revocation
+
+- **revoke-cred**  
+  Revoke a credential by ID.  
+  **Usage:**
+
+  ```bash
+  minervaid revoke-cred --id <credID> --store ./store
+  ```
+
+- **list-revoked**  
+  List all revoked credential IDs.  
+  **Usage:**
+
+  ```bash
+  minervaid list-revoked --store ./store
+  ```
+
+- **check-revoked**  
+  Check the revocation status of a credential.  
+  **Usage:**
+
+  ```bash
+  minervaid check-revoked --id <credID> --store ./store
+  ```
+
+### 5. Authentication
+
+- **auth-challenge**  
+  Generate a cryptographic challenge (nonce) for a DID.  
+  **Usage:**
+
+  ```bash
+  minervaid auth-challenge \
+    --domain api.example.com \
+    --expiry 5m \
+    --store ./store
+  ```
+
+- **auth-respond**  
+  Respond to an authentication challenge by signing it with your DID.  
+  **Usage:**
+
+  ```bash
+  minervaid auth-respond \
+    --did did:key:z123abc... \
+    --file challenge.json \
+    --store ./store
+  ```
+
+---
+
+For more details, refer to the code in `internal/credentials` and `internal/identity`.
