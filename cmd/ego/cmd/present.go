@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"time"
 
@@ -15,9 +16,10 @@ import (
 )
 
 var (
-	credsFlag  string
-	revealFlag string
-	outVault   string
+	credsFlag     string
+	revealFlag    string
+	outVault      string
+	zkpChallenges []string
 )
 
 // presentCmd creates a Verifiable Presentation from existing credentials
@@ -99,6 +101,41 @@ and sign a Verifiable Presentation.`,
 				credsList[i] = cred
 			}
 		}
+		// Apply ZKP challenges
+		for _, entry := range zkpChallenges {
+			parts := strings.Split(entry, ":")
+			if len(parts) != 3 {
+				return fmt.Errorf("invalid zkp spec %q; expected type:field:param", entry)
+			}
+			proofType, field, rawParam := parts[0], parts[1], parts[2]
+			switch proofType {
+			case "range":
+				minVal, err := strconv.ParseUint(rawParam, 10, 64)
+				if err != nil {
+					return fmt.Errorf("invalid min in zkp %q: %w", entry, err)
+				}
+				ch := credentials.Challenge{
+					Type:   "range",
+					Params: map[string]interface{}{"field": field, "min": minVal},
+				}
+				chBytes, _ := json.Marshal(ch)
+				for i := range credsList {
+					if err := credsList[i].AttachProof(chBytes); err != nil {
+						return fmt.Errorf("attaching %q to %s: %w", entry, credsList[i].ID, err)
+					}
+				}
+			default:
+				return fmt.Errorf("unsupported proof type %q", proofType)
+			}
+		}
+
+		// If we’ve attached ZKPs but no explicit reveal, redact all other fields
+		if len(zkpChallenges) > 0 && revealFlag == "" {
+			for i := range credsList {
+				// zero out credentialSubject so nobody sees the raw values
+				credsList[i].CredentialSubject = map[string]interface{}{}
+			}
+		}
 
 		// Build presentation
 		pres := credentials.NewPresentation(credsList, did)
@@ -131,4 +168,7 @@ func init() {
 	presentCmd.Flags().StringVar(&credsFlag, "creds", "", "Comma-separated credential IDs (default: all)")
 	presentCmd.Flags().StringVar(&revealFlag, "reveal", "", "Comma-separated fields to reveal (optional)")
 	presentCmd.Flags().StringVar(&outVault, "out", "", "Vault directory (optional, uses active)")
+	presentCmd.Flags().
+		StringSliceVar(&zkpChallenges, "zkp", nil,
+			"Add a zero-knowledge proof from `<type>:<field>:<param>`; can be repeated")
 }

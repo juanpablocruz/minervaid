@@ -1,0 +1,12 @@
+{
+  "@context": ["https://www.w3.org/2018/credentials/v1"],
+  "id": "test-cred",
+  "type": ["VerifiableCredential"],
+  "issuer": "did:example:issuer",
+  "issuanceDate": "2025-01-01T00:00:00Z",
+  "credentialSubject": {
+    "age": 42,
+    "name": "Alice"
+  },
+  "proof": []
+}

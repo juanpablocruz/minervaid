@@ -8,13 +8,15 @@ import (
 	"github.com/0xdecaf/zkrp/bulletproofs"
 )
 
-// ZKProof holds a Bulletproof range proof with its minimum threshold
-type ZKProof struct {
-	Proof  bulletproofs.BulletProof `json:"proof"`
-	MinAge uint64                   `json:"minAge"`
+// RangeProof holds a Bulletproof range proof with its minimum threshold and range end.
+type RangeProof struct {
+	Type  string                   `json:"type"`
+	Min   uint64                   `json:"min"`
+	Range uint64                   `json:"range"`
+	Proof bulletproofs.BulletProof `json:"proof"`
 }
 
-// nextPowerOfTwo returns the smallest power-of-two >= n
+// nextPowerOfTwo returns the smallest power-of-two >= n.
 func nextPowerOfTwo(n uint64) uint64 {
 	if n == 0 {
 		return 1
@@ -30,24 +32,25 @@ func nextPowerOfTwo(n uint64) uint64 {
 	return n
 }
 
-// GenerateAgeProof creates a zero-knowledge proof that 'age' >= 'minAge'
-// using the bulletproofs subpackage. It chooses a range end of 2^e where e
-// is the next power-of-two exponent that covers (age - minAge + 1).
-func GenerateAgeProof(age uint64, minAge uint64) (*ZKProof, error) {
-	if age < minAge {
-		return nil, fmt.Errorf("age %d is below minimum %d", age, minAge)
+// GenerateRangeProof creates a zero-knowledge proof that 'value' >= 'min' using Bulletproofs.
+// It computes a range end of 2^e where e is the smallest exponent such that 2^e >= (value - min + 1).
+func GenerateRangeProof(value, min uint64) (*RangeProof, error) {
+	if value < min {
+		return nil, fmt.Errorf("value %d is below minimum %d", value, min)
 	}
-	// Compute diff = age - minAge
-	diff := new(big.Int).SetUint64(age - minAge)
-	// Compute required range size = diff + 1
-	size := age - minAge + 1
-	// Determine exponent bits0 = ceil(log2(size))
+
+	// Compute difference: value - min
+	diff := new(big.Int).SetUint64(value - min)
+	// Range size = diff + 1
+	size := value - min + 1
+	// Calculate exponent bits0 = ceil(log2(size))
 	bits0 := uint64(math.Ceil(math.Log2(float64(size))))
-	// Compute exponent must be power-of-two
+	// Next power-of-two exponent = nextPowerOfTwo(bits0)
 	e := nextPowerOfTwo(bits0)
 	// Range end = 2^e
 	rangeEnd := uint64(1) << e
-	// Setup bulletproof params for this range end
+
+	// Setup bulletproof parameters for this range end
 	params, err := bulletproofs.Setup(int64(rangeEnd))
 	if err != nil {
 		return nil, fmt.Errorf("setting up bulletproof params: %w", err)
@@ -57,17 +60,31 @@ func GenerateAgeProof(age uint64, minAge uint64) (*ZKProof, error) {
 	if err != nil {
 		return nil, fmt.Errorf("proving range: %w", err)
 	}
-	return &ZKProof{Proof: proof, MinAge: minAge}, nil
+
+	return &RangeProof{
+		Type:  "BulletproofRangeProof",
+		Min:   min,
+		Range: rangeEnd,
+		Proof: proof,
+	}, nil
 }
 
-// VerifyAgeProof verifies that the provided proof demonstrates age ≥ MinAge
-func VerifyAgeProof(z *ZKProof) error {
-	ok, err := z.Proof.Verify()
-	if err != nil {
-		return fmt.Errorf("verifying range proof: %w", err)
+// VerifyRangeProof verifies that the provided RangeProof demonstrates value >= Min.
+func VerifyRangeProof(r *RangeProof) (err error) {
+	// Recover from panics during proof verification
+	defer func() {
+		if rec := recover(); rec != nil {
+			err = fmt.Errorf("panic verifying range proof: %v", rec)
+		}
+	}()
+
+	// Perform the cryptographic verification
+	ok, verr := r.Proof.Verify()
+	if verr != nil {
+		return fmt.Errorf("verifying range proof: %w", verr)
 	}
 	if !ok {
-		return fmt.Errorf("range proof invalid: age < %d", z.MinAge)
+		return fmt.Errorf("range proof invalid: value < %d", r.Min)
 	}
 	return nil
 }
